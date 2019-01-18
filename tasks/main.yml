@@ -1,0 +1,38 @@
+---
+- name: Ensure python pip is installed
+  apt:
+    name: python-pip
+    state: present
+
+- name: Install pexpect module to be able to generate the certificate
+  command: pip install pexpect
+
+- name: Make cert directory
+  file:
+    path: "{{ kube_cert_dir }}"
+    state: directory
+
+- name: Configure cert files rights
+  file:
+    path: "{{ kube_cert_dir }}/{{ item }}"
+    mode: 0600
+    state: touch
+  with_items:
+    - kubecfg.crt
+    - kubecfg.key
+
+- name: Create kubecfg.crt
+  shell: |
+    grep 'client-certificate-data' {{ kube_config_path }} | head -n 1 | awk '{print $2}' | base64 -d > {{ kube_cert_dir }}/kubecfg.crt
+
+- name: Create kubecfg.key
+  shell: |
+    grep 'client-key-data' {{ kube_config_path }} | head -n 1 | awk '{print $2}' | base64 -d > {{ kube_cert_dir }}/kubecfg.key
+
+- name: Create the p12 certificate
+  expect:
+    command: |
+      openssl pkcs12 -export -clcerts -inkey {{ kube_cert_dir }}/kubecfg.key -in {{ kube_cert_dir }}/kubecfg.crt -out {{ kube_cert_dir }}/kubecfg.p12 -name 'kubernetes-client'
+    responses:
+      Password: "{{ kube_cert_password }}"
+  no_log: true

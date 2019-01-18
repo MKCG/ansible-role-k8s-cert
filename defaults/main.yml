@@ -1,0 +1,4 @@
+---
+kube_config_path: ~/.kube/config
+kube_cert_dir: /opt/kube-cert
+kube_cert_password: kevin-masseix
